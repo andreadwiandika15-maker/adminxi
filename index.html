@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hasil Survei Siswa | SMAN 1 Sumberrejo</title>
+<style>
+:root{--blue:#1028d8;--blue2:#071b9e;--orange:#f07816;--yellow:#ffe326;--ink:#172044}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#06128b,#163cff 55%,#071b9e);font-family:Arial,Helvetica,sans-serif;color:var(--ink);padding:22px 13px}.wrap{max-width:1200px;margin:auto}.header{display:flex;align-items:center;gap:16px;color:#fff;margin-bottom:18px}.logo{width:82px;height:82px;object-fit:contain;background:#fff;border:4px solid var(--yellow);border-radius:50%;padding:3px}.header h1{font-size:clamp(20px,4vw,31px);margin:0 0 5px;text-transform:uppercase}.header p{margin:0;font-weight:bold}.panel{background:#fff;border:5px solid var(--yellow);border-radius:20px;padding:20px;box-shadow:0 10px 28px #0004}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.toolbar input,.toolbar select{padding:11px;border:2px solid #d7dcf5;border-radius:10px;font-size:14px}.toolbar input{flex:1;min-width:190px}.btn{border:0;border-radius:10px;background:var(--blue);color:white;font-weight:bold;padding:12px 15px;cursor:pointer}.btn.alt{background:var(--orange)}.btn.danger{background:#c62828}.btn.row-delete{padding:7px 10px;font-size:12px;background:#c62828}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}.stat{background:#f1f3ff;border-left:6px solid var(--orange);border-radius:12px;padding:14px}.stat strong{display:block;font-size:26px;color:var(--blue2)}.stat span{font-size:13px;color:#535b7b}.table-wrap{overflow-x:auto;border:1px solid #e0e4f5;border-radius:12px}table{border-collapse:collapse;width:100%;min-width:950px;font-size:13px}th,td{padding:11px 10px;border-bottom:1px solid #e6e9f5;text-align:left;vertical-align:top}th{background:var(--blue);color:#fff;position:sticky;top:0}tr:nth-child(even){background:#f7f8ff}tr:hover{background:#fff6d6}.status{padding:12px;border-radius:10px;background:#fff7dc;color:#6c5100;margin:10px 0}.empty{text-align:center;padding:28px;color:#68708c}.small{font-size:12px;color:#68708c;margin-top:12px;line-height:1.5}.error{background:#fff0f0;color:#a11b1b}.count{font-weight:bold;color:var(--blue2)}
+@media(max-width:650px){.header{align-items:flex-start}.logo{width:65px;height:65px}.panel{padding:13px}.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:1/-1}}
+</style></head>
+<body><div class="wrap">
+<header class="header"><img class="logo" src="logo-sekolah.jpeg" alt="Logo sekolah"><div><h1>Rekap Survei Gaya Belajar</h1><p>SMA NEGERI 1 SUMBERREJO</p></div></header>
+<main class="panel">
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Cari nama siswa...">
+    <select id="classFilter"><option value="">Semua kelas</option><option>XI 1</option><option>XI 2</option><option>XI 3</option><option>XI 4</option><option>XI 5</option><option>XI 6</option><option>XI 7</option><option>XI 8</option><option>XI 9</option></select>
+    <button class="btn alt" id="exportBtn">Unduh CSV</button><button class="btn danger" id="deleteAllBtn">Hapus Semua Data</button>
+  </div>
+  <div class="stats"><div class="stat"><strong id="total">0</strong><span>Total jawaban masuk</span></div><div class="stat"><strong id="classes">0</strong><span>Kelas yang mengisi</span></div><div class="stat"><strong id="visible">0</strong><span>Data ditampilkan</span></div></div>
+  <div id="status" class="status">Menghubungkan ke database...</div>
+  <div class="table-wrap"><table><thead><tr>
+    <th>No.</th><th>Nama</th><th>Kelas</th><th>Suasana</th><th>Musik</th><th>Metode belajar</th><th>Tugas</th><th>Jika belum paham</th><th>Waktu</th><th>Penjelasan</th><th>Jeda</th><th>Gangguan fokus</th><th>Aktivitas menarik</th><th>Saran</th><th>Waktu kirim</th><th>Aksi</th>
+  </tr></thead><tbody id="rows"><tr><td colspan="16" class="empty">Memuat data...</td></tr></tbody></table></div>
+  <p class="small">Halaman ini tidak memakai login sesuai permintaan. Siapa pun yang memiliki alamat halaman ini dapat melihat jawaban survei. Jangan masukkan data pribadi atau informasi sensitif.</p>
+</main></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSycCdwMgPsU_r_WeBCEDKX12s2TAfDtWZ4",
+  authDomain: "admin-fiks.firebaseapp.com",
+  databaseURL: "https://admin-fiks-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "admin-fiks",
+  storageBucket: "admin-fiks.firebasestorage.app",
+  messagingSenderId: "638737717568",
+  appId: "1:638737717568:web:fe5eab33d06c02cc72c2a5"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+let allData=[];
+const fields=['nama','kelas','suasana','musik','metode','tugas','kesulitan','waktu','penjelasan','jeda','gangguan','aktivitas','saran','createdAt'];
+const labels=['No.','Nama','Kelas','Suasana','Musik','Metode belajar','Tugas','Jika belum paham','Waktu','Penjelasan','Jeda','Gangguan fokus','Aktivitas menarik','Saran','Waktu kirim'];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function filtered(){const q=document.getElementById('search').value.toLowerCase().trim(),cl=document.getElementById('classFilter').value;return allData.filter(x=>(!cl||x.kelas===cl)&&(!q||String(x.nama||'').toLowerCase().includes(q))).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));}
+function render(){
+ const data=filtered(),tbody=document.getElementById('rows');
+ document.getElementById('total').textContent=allData.length;
+ document.getElementById('classes').textContent=new Set(allData.map(x=>x.kelas).filter(Boolean)).size;
+ document.getElementById('visible').textContent=data.length;
+ if(!data.length){tbody.innerHTML='<tr><td colspan="16" class="empty">Belum ada jawaban yang cocok.</td></tr>';return;}
+ tbody.innerHTML=data.map((x,i)=>'<tr><td>'+(i+1)+'</td>'+['nama','kelas','suasana','musik','metode','tugas','kesulitan','waktu','penjelasan','jeda','gangguan','aktivitas','saran'].map(k=>'<td>'+esc(x[k]||'-')+'</td>').join('')+'<td>'+ (x.createdAt?new Date(x.createdAt).toLocaleString('id-ID'):'-')+'</td><td><button class="btn row-delete" data-id="'+esc(x.id)+'" data-name="'+esc(x.nama||'siswa')+'">Hapus</button></td></tr>').join('');
+}
+document.getElementById('rows').addEventListener('click', async (e)=>{
+ const button=e.target.closest('.row-delete');
+ if(!button) return;
+ const id=button.dataset.id, name=button.dataset.name || 'siswa';
+ if(!confirm('Hapus jawaban milik '+name+'? Data yang dihapus tidak dapat dikembalikan.')) return;
+ button.disabled=true;button.textContent='...';
+ try{await db.ref('survei_gaya_belajar/'+id).remove();}
+ catch(err){console.error(err);alert('Gagal menghapus data. Periksa koneksi dan Rules Firebase.');button.disabled=false;button.textContent='Hapus';}
+});
+document.getElementById('deleteAllBtn').addEventListener('click', async ()=>{
+ if(!allData.length){alert('Belum ada data untuk dihapus.');return;}
+ if(!confirm('PERINGATAN: Hapus SELURUH '+allData.length+' jawaban survei? Tindakan ini tidak dapat dibatalkan.')) return;
+ if(!confirm('Konfirmasi terakhir: seluruh data survei akan dihapus permanen. Lanjutkan?')) return;
+ const button=document.getElementById('deleteAllBtn');button.disabled=true;button.textContent='Menghapus...';
+ try{await db.ref('survei_gaya_belajar').remove();alert('Seluruh data survei berhasil dihapus.');}
+ catch(err){console.error(err);alert('Gagal menghapus seluruh data. Periksa koneksi dan Rules Firebase.');}
+ finally{button.disabled=false;button.textContent='Hapus Semua Data';}
+});
+document.getElementById('search').addEventListener('input',render);
+document.getElementById('classFilter').addEventListener('change',render);
+document.getElementById('exportBtn').addEventListener('click',()=>{
+ const data=filtered();if(!data.length){alert('Tidak ada data untuk diunduh.');return;}
+ const rows=[labels,...data.map((x,i)=>[i+1,x.nama,x.kelas,x.suasana,x.musik,x.metode,x.tugas,x.kesulitan,x.waktu,x.penjelasan,x.jeda,x.gangguan,x.aktivitas,x.saran,x.createdAt?new Date(x.createdAt).toLocaleString('id-ID'):''])];
+ const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='rekap-survei-gaya-belajar.csv';a.click();URL.revokeObjectURL(url);
+});
+db.ref('survei_gaya_belajar').on('value',snap=>{
+ allData=[];snap.forEach(child=>allData.push({...child.val(),id:child.key}));
+ document.getElementById('status').textContent='Terhubung. Data diperbarui otomatis saat ada jawaban baru.';
+ document.getElementById('status').className='status';render();
+},err=>{
+ console.error(err);document.getElementById('status').textContent='Gagal membaca database. Periksa koneksi dan Rules Firebase Realtime Database.';document.getElementById('status').className='status error';
+});
+</script></body></html>
